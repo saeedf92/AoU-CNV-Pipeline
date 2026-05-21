@@ -1,0 +1,7 @@
+# Ignore file types
+*.log
+*.txt
+*.tsv
+*.csv
+*.docx
+*.xlsx
