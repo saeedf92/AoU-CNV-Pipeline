@@ -9,7 +9,7 @@
 
 README updated: <i>May-24-2026</i> 
 
-A bioinformatics pipeline designed for the **All of Us (AoU) Research Program** Workbench to detect, filter, and analyze Copy Number Variations (CNVs) from large-scale genomic data of short.
+A bioinformatics pipeline designed for the **All of Us (AoU) Research Program** Workbench to detect, filter, and analyze Copy Number Variations (CNVs) from large-scale short-read Whole Genome Sequencing (srWGS) genomic data.
 
 ---
 
