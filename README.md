@@ -1,0 +1,200 @@
+# AoU CNV Pipeline
+
+<!-- [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) -->
+[![Platform: All of Us](https://img.shields.io/badge/Platform-AoU_Workbench-blue)](https://workbench.researchallofus.org/)
+![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)
+![R Version](https://img.shields.io/badge/R-4.4%2B-blue.svg)
+![GitHub last commit](https://img.shields.io/github/last-commit/saeedf92/AoU-CNV-pipeline)
+
+
+README updated: <i>May-24-2026</i> 
+
+A bioinformatics pipeline designed for the **All of Us (AoU) Research Program** Workbench to detect, filter, and analyze Copy Number Variations (CNVs) from large-scale genomic data of short.
+
+---
+
+## Contents
+- [Introduction](#introduction)
+- [Pipeline Architecture](#pipeline-architecture)
+- [Prerequisites & Setup](#prerequisites--setup)
+- [Phenotyping](#phenotyping)
+- [Data Processing](#data-processing)
+- [CNV Region Analysis](#cnv-region-analysis)
+- [Gene-set Burden Analysis](#gene-set-burden-analysis)
+- [Usage Examples](#usage-examples)
+- [Publications](#publications)
+- [License](#license)
+
+---
+
+## Introduction
+
+This repository contains a bioinformatics pipeline specifically designed for detecting and analyzing **Copy Number Variations (CNVs)** from **short-read Whole Genome Sequencing (srWGS)** data within the **All of Us (AoU) Research Program** cloud environment. 
+
+The pipeline includes three core analysis blocks:
+* **Data Processing:** Plocessing srWGS structural variant calls, applies additional quality control metrics, and standardizes data formats for downstream analysis.
+* **CNV Region Analysis:** Aggregating individual sample calls across the cohort to perform association testing of CNV Regions with pre-defined binary phenotype cohort.
+* **Gene Set Analysis:** Functional annotation mapping of genomic coordinates of CNVs to reference GENCODE genes to perform gene-set enrichment analysis and identifying inplicated sets in a phenotype.
+
+---
+## Pipeline Architecture
+
+```mermaid
+graph TB
+    %% Styles
+    classDef step fill:#533E85,stroke:#333,stroke-width:2px,rounded;
+    classDef tech fill:#488FB1,stroke:#0288d1,stroke-width:1px,font-style:italic;
+
+    %% Nodes
+    A[Phenotyping] --> B[AoU srWGS SV Data]
+    B --> C[Data Processing & QC]
+    C --> D[CNV Region Analysis]
+    D --> E[Gene Set Burden Analysis]
+
+    A_sub(SQL Query OMOP Tables, ICD9/10)
+    B_sub(VCFs in AoU CDR )
+    C_sub(BCFtools, PLINK2.0, Custom Filters)
+    D_sub(PLINK2.0)
+    E_sub(PLINK2.0 / R / Python)
+
+    %% Sub-connections
+    A -.-> A_sub
+    B -.-> B_sub
+    C -.-> C_sub
+    D -.-> D_sub
+    E -.-> E_sub
+
+    %% Apply Styles
+    class A,B,C,D,E step;
+    class A_sub,B_sub,C_sub,D_sub,E_sub tech;
+```
+
+---
+## Prerequisites & Setup
+
+To execute this pipeline successfully within the AoU Workbench, users should meet the following baseline conceptual and technical requirements:
+
+### 🧠 Conceptual Knowledge
+* **AoU [CDRv8](https://support.researchallofus.org/hc/en-us/articles/30294451486356-Curated-Data-Repository-CDR-version-8-Release-Notes):** Basic understanding of the *All of Us* Cohort Data Repository environment.
+* **OMOP CDM:** Elementary familiarity with the Observational Medical Outcomes Partnership Common Data Model tables, relationships, and structures.
+* **SQL Querying:** Ability to query, extract, and structure Electronic Health Record (EHR) data using SQL.
+
+### 💻 Technical Environment & Tools
+Ensure your cloud environment is provisioned with a basic understanding of these environments and has the following runtimes and command-line tools available:
+* **Languages:** Python (v3.10+) and R (v4.4+)
+* **Command Line Tools:** 
+  * [`BCFtools`](https://samtools.github.io/bcftools/bcftools.html) (for structural variant VCF manipulation)
+  * [`PLINK 2.0`](https://www.cog-genomics.org/plink/2.0/) (for association testing and dosage analysis)
+
+
+> **Note:** All steps and analyses are done in Researcher Workbench 1.0
+
+---
+
+## Phenotyping
+
+There are two approaches to build the cohort: 
+
+&emsp; **1. Building a Dataset with the Dataset Builder**
+
+  The Dataset Builder is a point-and-click interface in the AoU Researcher Workbench that allows you to select and extract specific data for your study. Building a dataset involves a three-step workflow: selecting a concept set (a group of related medical concepts from a single data domain), defining your cohort, and selecting your values. 
+    
+  For step-by-step instructions, see the official [AoU Dataset Builder Documentation](https://support.researchallofus.org/hc/en-us/articles/4556645124244-Building-a-Dataset-with-the-Dataset-Builder).
+
+&emsp; **2. Building a Dataset with SQL Query from OMOP Tables**
+
+  For complex phenotyping and advanced cohort extraction, researchers can bypass the graphical UI and query the All of Us Curated Data Repository (CDR) directly via Google BigQuery within Jupyter Notebooks. This programmatic approach uses SQL to interact with the standard OHDSI OMOP Common Data Model (CDM) tables (such as `person`, `condition_occurrence`, `measurement`, and `drug_exposure`). It offers unmatched flexibility for building highly customized cohorts that require advanced logic, relational table joins, or strict temporal constraints.
+
+  The polished production template for this framework is stored in the repository at:  
+  [`01_phenotyping/01_SQL_phenotype_query.py`](01_phenotyping/01_SQL_phenotype_query.py)
+
+
+  For detailed guidelines on relational mapping, schema definitions, and vocabulary tracking, see the official [AoU Understanding OMOP Basics Documentation](https://support.researchallofus.org/hc/en-us/articles/360039585391-Understanding-OMOP-Basics).
+
+---
+
+## Data Processing
+
+
+---
+
+### Converting VCFs to PLINK Format
+
+
+---
+
+## CNV Region Analysis
+
+
+
+---
+
+## Gene-set Burden Analysis
+
+**Here NDD gene-sets are primiarly referred to, however this same pipeline is used for any other gene-set.
+
+Pre-requistes: Duplication and deletion .bim files per ancestry (complete 01_separating_ANC_rare_CNVs_MAC) Ancestry specific annotation tables (complete 00_ANNOTATE_SV_VCF_PER_ANCESTRY)
+
+Format files for burden analyses
+NOTEBOOK: 00_BURDEN_FORMAT_FILES_01.ipynb 00_BURDEN_FORMAT_ANC_SPECIFIC_FILES.ipynb
+
+Here we want to format all files for the burden analyses. In order to complete this step, you need to have gone through the notebook 00_ANNOTATE_SV_VCF_PER_ANCESTRY. We will select out all rare CNVs (or all rare CNV also with a length greater than 10kb). You can select 00_BURDEN_FORMAT_ANC_SPECIFIC_FILES.ipynb or 00_BURDEN_FORMAT_FILES_01.ipynb depending on if you are using an overall MAF calculated by All of Us or the ancestry specific MAF. Then we will overlap these rCNVs to genes per each gene-set for the gene-set analyses. For each gene-set we have a list of genes within it. We then take our annotation table and overlap the rCNVs to each gene based on gene name and position.
+
+Generate CNV genotype matrix using PLINK
+NOTEBOOK: 00_BURDEN_COUNT_PLINK_02.ipynb
+
+Individual level CNV count and burden was assessed using PLINK1.9 and -–recode -A (to verify code specification see: https://www.cog-genomics.org/plink/1.9/data#recode). This will result in 0,1,2. Where 2 is heterozygous, and 1 is homozygous for the minor allele. Homozygous for the minor allele in terms of CNVs means the individual has two identical copies of the DNA segment that is less common in the general population.
+
+Each job will select out different CNVs to identify individual level presence. For example, using --extract you can select out all rare CNVs across the genome.
+
+Calculate genomewide burden for all CNVs and overlapping CNVs to specific (NDD) gene sets.
+NOTEBOOK: 00_BURDEN_NDD_GENE_SET_03.ipynb
+
+OR
+
+00_BURDEN_GENOMWIDE_03.ipynb
+
+First, we calculate the total burden in terms of count and length (Mb) per chromosome. Specifically this includes: duplication count, duplication length (Mb), deletion count, deletion length (Mb). Second, we need to merge the chromosome level scores together. At this point we have chromosome level files with rows=IIDs, columns= dup_count, del_count, dup_length, del_length. Chromosomes are merged and the average rCNV length (genomewide) is calculated, the total genomewide_del_count (or dup), genome_wide_del_burden_mb (or dup).
+
+NOTE: In the 00_BURDEN_GENOMWIDE_03.ipynb notebook this is truly all genomewide dup/del counts/length, and average. BUT in the 00_BURDEN_NDD_GENE_SET_03.ipynb this is restricted per gene-set.
+
+At the end of this step you should have a file that has these columns: FID IID genome_wide_del_burden_mb genome_wide_dup_burden_mb genome_wide_del_count genome_wide_dup_count genome_wide_total_burden_mb genome_wide_total_count
+
+Calculate whether the burden of rCNVs differs across cases and controls
+NOTEBOOK: 00_BURDEN_NDD_GENE_SET_04.ipynb OR
+
+00_BURDEN_GENOMEWIDE_04A.ipynb
+
+This script tests the whether the burden of all CNVs (rare duplications and deletions) differs across cases and controls. Additionally, the burden of total count and distance across CNV type (duplication, deletion, either duplication or deletion) was examined. Similarly, this was completed for the set of CNVs which overlap NDD gene-sets (as used in the PGC-PTSD Maihofer et al. 2022 paper [Supplementary Table 2]. CNV level association analyses have revealed differences in genomic inflation for Firth's regression vs. GLM. As a result, we also tested whether there were gene-set differences using GLM logistic regression or Firth's logistic regression.
+
+Primary geneset burden models include PC1:PC5, genomewide total count, and average genomwide CNV length (Mb) as covariates in concordance with Maihofer et al. (2022). However, sensitivity analyses including sex and age along with PC1:PC5, genomewide total burden (Mb), and average genomwide CNV length (Mb) can be completed with these scripts. Notably, Maihofer et al. (2022) uses regular GLM, however we have included firth's regression as well given the small size of rCNVs there is high sparsity in the data.
+
+Maihofer et al. (2022) https://www.nature.com/articles/s41380-022-01776-4#Abs1 "analyses also contained predictors for genome-wide total CNV count and genome-wide average length of CNVs" (Maihofer et al., 2022)
+
+In an effort to replicate Maihofer et al. (2022) we also used the same predictors which included duplication count and deletion count. See the corresponding GitHub to verify this: https://github.com/nievergeltlab/cnv_freeze1/blob/main/04_gene_set_ologit.r#L183
+
+However, we also included the following predictors: duplication length (Mb), deletion length (Mb), genomewide total count, genomewide total length (Mb). To be clear, the genomewide total count, genomewide total length (Mb), and average rCNV length files should come from the files created in 00_BURDEN_GENOMWIDE_03.ipynb NOT from 00_BURDEN_NDD_GENE_SET_03.ipynb, as these genomewide total count/length and average rCNV legnth files are restricted to these gene-sets. So, regardless of if you are in the 00_BURDEN_NDD_GENE_SET_04.ipynb or 00_BURDEN_GENOMWIDE_04A.ipynb/00_BURDEN_GENOMWIDE_04B.ipynb notebook these files should be used.
+
+Lastly, depending on the notebook 00_BURDEN_GENOMWIDE_04A.ipynb.00_BURDEN_GENOMWIDE_04B.ipynb or 00_BURDEN_NDD_GENE_SET_04.ipynb the deletion count and duplication count variables will either correspond to the genomewide deletion/duplication count OR will represent the gene-set deletion/duplication count.
+
+Organize NDD gene-set results
+00_BURDEN_NDD_GENE_SET_05.ipynb
+
+This notebook performs multiple testing correction for NDD gene set tests. Here multiple testing is done following the same exact method as Maihofer et al. (2022) and also to all gene-set predictiors (eg. genomewide count/length, deletion/duplication length).
+
+00_BURDEN_PTSD_GWAS_GENE_SET_05.ipynb
+
+This notebook performs multiple testing correction for 5 PTSD GWAS gene set tests.
+
+00_BURDEN_ABNORMAL_GENE_SET_05.ipynb
+
+This notebook performs multiple testing correction for abnormal gene set tests derived from mouse mutant studies.
+
+Meta-Analysis
+00_BURDEN_META_ANALYSIS_06.ipynb
+
+This notebook performs a Weighted Stouffer's meta-analysis across EUR, AFR, AMR and across gene-sets (NDD gene-sets, PTSD gene-sets, and abnormal behavior gene-sets). In addition, to assess the consistency of rare CNV effects across EUR, AFR, and AMR ancestries, I calculated Cochran’s Q and the I^2 statistic. Gene-sets exhibiting P_het < 0.05 or I^2 > 50 were identified as having significant ancestral discrepancy, suggesting that the rare variant burden in these pathways may be influenced by population-specific genetic architecture or limited by the differential power of the ancestry cohorts. However, given the small number of cohorts (k=3) these results should be interepreted with caution.
+
+
+---
+## Publications
