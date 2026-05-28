@@ -169,7 +169,7 @@ Prior to downstream analysis, further QCs need to be applied. (A) First, samples
 
 ## CNV Region Analysis
 
-To analyze CNV regions, users should follow three steps.
+To analyze CNV regions, users should follow four steps.
 
 ### Step 1: Covariate Tables
 
