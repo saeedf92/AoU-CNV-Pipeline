@@ -7,7 +7,7 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/saeedf92/AoU-CNV-pipeline)
 
 
-README updated: <i>May-27-2026</i> 
+README updated: <i>May-28-2026</i> 
 
 A bioinformatics pipeline designed for the **All of Us (AoU) Research Program** Workbench to detect, filter, and analyze Copy Number Variations (CNVs) from large-scale short-read Whole Genome Sequencing (srWGS) genomic data.
 
@@ -146,7 +146,7 @@ All VCF files need to be converted to PLINK files format (`.bed`, `.bim` and `.f
 
 ### 3. Separating DEL and DUP CNVs
 
-In this pipeline, deletions and duplications will be analyzed separtely and thus they need to be separated and generated DEL and DUP `.bim` files. Use [`03_separating_DELs_DUPs_bim.py](02_data_processing/03_separating_DELs_DUPs_bim.py) script to genarate the DEL- and DUP-specific CNVs
+In this pipeline, deletions and duplications will be analyzed separtely and thus they need to be separated and generated DEL and DUP `.bim` files. Use [`03_separating_DELs_DUPs_bim.py](02_data_processing/03_separating_DELs_DUPs_bim.py) script to genarate the DEL- and DUP-specific CNV files.
 
 ### 4. Creating CNV Annotation Table
 
@@ -169,14 +169,61 @@ Prior to downstream analysis, further QCs need to be applied. (A) First, samples
 
 ## CNV Region Analysis
 
-To analyze CNV regions, users should follow XXXXX steps.
+To analyze CNV regions, users should follow three steps.
 
-1. Step 1: Covariate Tables
+### Step 1: Covariate Tables
 
-2. Step 2: Modify `.fam` files
+For CNV region analysis, covariate tables must be generated, and analyses are performed separately for cases and controls. This can be done using two different approaches.
 
-3. Step 3: Run Firth's Logistic Regression
+**Method 1**: Master Covariate Table
 
+In this approach, a single master covariate table is generated for the entire dataset, including all required predictors. Separate `.txt` files containing the individual IDs for cases and controls are then created. Genome-wide association studies (GWAS) are subsequently performed using the `--keep` option in PLINK 2.0 to restrict analyses to the intended case or control cohort.
+
+**Method 2**: Separate Covariate Tables
+
+Alternatively, separate covariate tables can be generated for each cohort (cases and controls) instead of using a single master table. In this approach, the corresponding covariate table must be provided each time a GWAS analysis is run. 
+
+The following predictors are included in the CNV region analysis:
+
+* **Age**: Defined as the individual's age at the time of blood/saliva collection for genomic analysis. Sampling dates are obtained from the `genomic_metrics.tsv` file available in the [`CDRv8 directory`](https://support.researchallofus.org/hc/en-us/articles/29475233432212-Controlled-CDR-Directory) under the srWGS auxiliary files.
+
+* **Sex**: Encoded as Male (`1`) and Female (`2`). Individuals with sex QC issues or discrepancies between self-reported sex and genomic sex are excluded, as described previously.
+
+* **Principal Components (PCs)**: Ten principal components (PC1–PC10) are used for CNV region analysis. These PCs were generated in previous work by Singh et al. (2025) using the full AoU cohort. For trans-ancestry analyses, PCs were derived from POPMaD which includes AFR-like, AMR-like, CSA-like, EAS-like, EUR-like, MID-like, and OCE-like ancestry groups. For ancestry-specific analyses (e.g., EUR, AFR, and AMR), PCs generated using FlashPCA are used.
+
+To generate covariate tables please refer to [`01_covariate_tables.py`](03_CNV_region_analysis/01_covariate_tables.py) script.
+
+### Step 2: Modify `.fam` files
+
+The `.fam` files generated during the VCF-to-PLINK conversion contain placeholder phenotype values. For association testing, PLINK requires the 6th column of the `.fam` file to correctly identify cases (`2`), controls (`1`), and unknown (`-9`) values. Because this pipeline performs ancestry-specific analyses, you must update the `.fam` files using the phenotypic data defined in your covariate tables. Use the [`02_modify_fam_files.py`](03_CNV_region_analysis/02_modify_fam_files.py) script to automate this mapping across all populations and chromosomes.
+
+### Step 3: Run Firth's Logistic Regression
+
+Once the `.fam` files are updated and covariates are prepared, perform the association analysis using **Firth’s penalized logistic regression**. This method is preferred for rare variant analysis (like CNVs) as it reduces bias caused by small sample sizes or unbalanced case-control ratios.
+
+Run the analysis using `PLINK 2.0` with the `--glm firth` flag using covriate files generated in Step 1. Use this script to run GLM logistic regression analysis: [`03_firth_logistic_regression.py`](03_CNV_region_analysis/03_firth_logistic_regression.py)
+
+### Step 4: Post GWAS Analysis and Visualization
+
+After the parallelized Firth regression jobs complete, the results must be aggregated and validated. This step transforms raw PLINK outputs into results through the following workflow:
+
+**4.1 Results Aggregation**
+Since association testing is performed per chromosome and ancestry, the first task is to concatenate these individual outputs into a single "Summary Statistics" file for each analysis group (e.g., `EUR_DELs`, `EUR_DUPs`).
+
+**4.2 Statistical Quality Control**
+*   **Genomic Inflation Factor ($\lambda$):** We calculate $\lambda$ to assess potential systemic bias or population stratification. A $\lambda \approx 1$ indicates that the observed p-values follow the expected null distribution, while $\lambda > 1.1$ may suggest uncorrected stratification. $\lambda$<sub>1000</sub> is used to standardize the $\lambda$.
+*   **QQ Plots:** Quantile-Quantile plots are generated to visualize the departure of observed p-values from the null hypothesis, specifically looking for the "tail" of significant associations.
+
+**4.3 Multiple Testing Correction**
+Given the high number of genomic regions tested, we apply **False Discovery Rate (FDR)** correction (Benjamini-Hochberg) to control for type I errors. Variants with an FDR-adjusted p-value < 0.05 are considered significantly associated with the phenotype.
+
+**4.4 Manhattan Plots**
+Manhattan plots are used to visualize the genomic distribution of associations. We highlight significant regions and label them based on their physical coordinates or overlapping genes.
+
+**4.5 Functional Annotation Mapping**
+Using the **CNV Annotation Table** generated in the Data Processing stage, we map significant CNV regions to genes. This allows us to identify if specific deletions or duplications are disrupting protein-coding regions or known regulatory elements.
+
+You can automate this entire process using the [`04_post_gwas_analysis.R`](03_CNV_region_analysis/04_post_gwas_analysis.R) script.
 
 ---
 
@@ -253,3 +300,5 @@ This notebook performs a Weighted Stouffer's meta-analysis across EUR, AFR, AMR 
 
 ---
 ## Citations
+
+Singh, M., Chatzinakos, C., Barr, P. B., Gentry, A. E., Bigdeli, T. B., Webb, B. T., & Peterson, R. E. (2025). Trans-ancestry Genome-Wide Analyses in UK Biobank Yield Novel Risk Loci for Major Depression. medRxiv: The Preprint Server for Health Sciences, 2025.02.22.25322721. https://doi.org/10.1101/2025.02.22.25322721 
