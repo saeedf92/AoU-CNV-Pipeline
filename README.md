@@ -1,13 +1,13 @@
 # AoU CNV Pipeline
 
 <!-- [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) -->
-[![Platform: All of Us](https://img.shields.io/badge/Platform-AoU_Workbench-blue)](https://workbench.researchallofus.org/)
+[![Platform: All of Us](https://img.shields.io/badge/Platform-AoU_Workbench1.0-blue)](https://workbench.researchallofus.org/)
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)
 ![R Version](https://img.shields.io/badge/R-4.4%2B-blue.svg)
 ![GitHub last commit](https://img.shields.io/github/last-commit/saeedf92/AoU-CNV-pipeline)
 
 
-README updated: <i>May-24-2026</i> 
+README updated: <i>May-27-2026</i> 
 
 A bioinformatics pipeline designed for the **All of Us (AoU) Research Program** Workbench to detect, filter, and analyze Copy Number Variations (CNVs) from large-scale short-read Whole Genome Sequencing (srWGS) genomic data.
 
@@ -23,6 +23,7 @@ A bioinformatics pipeline designed for the **All of Us (AoU) Research Program** 
 - [Gene-set Burden Analysis](#gene-set-burden-analysis)
 - [Usage Examples](#usage-examples)
 - [Publications](#publications)
+- [Citations](#citations)
 - [License](#license)
 
 ---
@@ -74,12 +75,12 @@ graph TB
 
 To execute this pipeline successfully within the AoU Workbench, users should meet the following baseline conceptual and technical requirements:
 
-### 🧠 Conceptual Knowledge
+### Conceptual Knowledge
 * **AoU [CDRv8](https://support.researchallofus.org/hc/en-us/articles/30294451486356-Curated-Data-Repository-CDR-version-8-Release-Notes):** Basic understanding of the *All of Us* Cohort Data Repository environment.
 * **OMOP CDM:** Elementary familiarity with the Observational Medical Outcomes Partnership Common Data Model tables, relationships, and structures.
 * **SQL Querying:** Ability to query, extract, and structure Electronic Health Record (EHR) data using SQL.
 
-### 💻 Technical Environment & Tools
+### Technical Environment & Tools
 Ensure your cloud environment is provisioned with a basic understanding of these environments and has the following runtimes and command-line tools available:
 * **Languages:** Python (v3.10+) and R (v4.4+)
 * **Command Line Tools:** 
@@ -115,16 +116,66 @@ There are two approaches to build the cohort:
 
 ## Data Processing
 
+### 1. Setup dsub and Google Cloud Virtual Machine (VM)
 
----
+#### 1.1 dsub
 
-### Converting VCFs to PLINK Format
+Since all jobs must be run in the Google Cloud environment, users with Controlled Tier access are required to use `dsub` commands to process large volumes of data and run batch jobs. `dsub` is a command-line tool that simplifies submitting and running batch scripts in the cloud. With dsub, users can write shell scripts and submit them to a job scheduler directly from Jupyter notebooks. `dsub` supports Google Cloud as the backend batch job runner. Refer to the []`dsub documentation`](https://github.com/DataBiosphere/dsub) for additional guidance on writing dsub commands and examples of dsub scripts. Refer to the [`dsub Tutorial Notebook'](https://workbench.researchallofus.org/workspaces/aou-rw-6221d5ec/howtousedsubintheresearcherworkbenchv7/analysis) for more information on getting started with dsub.
 
+To set up `dsub` and run batch jobs in the background within AoU, first run [`01_dsub_setup.sh`](/02_data_processing/01_dsub_setup.sh) script to configure `aou_dsub`.
+
+**Note:** Working in the Google Cloud environment and running dsub jobs requires basic familiarity with Google Cloud concepts, including buckets, Docker, and Docker images.
+
+#### 1.2 Virtual Machines (VMs) and cost
+In order to manage job costs, it is important get familiar with different machines, analysis types and cost calculations. To mange costs consider following items:
+  *  `--machine-type` : Specifies the Google Cloud virtual machine type to use for the job, including the number of CPUs and amount of memory (e.g., n1-standard-4). Please refer to [`google cloud pricing`](https://cloud.google.com/pricing/list?_gl=1*1gleqw1*_up*MQ..*_gs*MQ..&gclid=CjwKCAjwrNrQBhBjEiwAoR4VOyYRPRUNWdMzGJn9m226iwRXc7WV0b2b8wrGxFzOEyF41aCMyGz0KBoCE6MQAvD_BwE&gclsrc=aw.ds) for more information.
+  *  `--disk-size` : Sets the size of the attached persistent storage disk (in GB) used for input/output data and intermediate files during job execution.
+  *  `--boot-disk-size` : Defines the size of the VM boot disk (in GB), which stores the operating system and installed software required to run the job.
+
+Cost Management
+
+Selecting appropriate values for `--machine-type`, `--disk-size`, and `--boot-disk-size` helps optimize cloud computing costs by allocating only the resources needed for the job.
+
+Job Parallelism
+
+`dsub` supports running multiple jobs in parallel, which can significantly reduce total processing time for large-scale analyses, although increased parallelism may also increase overall cloud computing costs. Depending on the workflow, users can either submit multiple jobs simultaneously using separate VMs or run a single job on one VM and parallelize tasks internally within that VM.
+
+### 2. Converting VCFs to PLINK Format
+
+All VCF files need to be converted to PLINK files format (`.bed`, `.bim` and `.fam`) using [`02_VCF_to_PLINK_Format_conversion.py`](/02_data_processing/02_VCF_to_PLINK_Format_conversion.py)
+
+### 3. Separating DEL and DUP CNVs
+
+In this pipeline, deletions and duplications will be analyzed separtely and thus they need to be separated and generated DEL and DUP `.bim` files. Use [`03_separating_DELs_DUPs_bim.py](02_data_processing/03_separating_DELs_DUPs_bim.py) script to genarate the DEL- and DUP-specific CNVs
+
+### 4. Creating CNV Annotation Table
+
+Users require annotation table for post analysis steps to annotate CNVs. It includes following information:
+
+`chr`,	`start`,	`end`,	`ID`,	`ALT`,	`MAF`,	`length_bp`,	`cytoband`,	`gene_id`, `gene_name`,	`Gene_ID`,	`Gene_Name`,	`Gene_Start`,	`Gene_End`,	`Gene_Length`,	`cnv_gene_overlap_length`,	`cnv_gene_overlap_Pct`
+
+In the separate annotation file, it includes
+`QUAL`, `FILTER`, `AF`, `AC`, and gnomAD v4.1.0 allele frequencies (including joint and by ancestry groups AF). 
+
+CNV coordinates, AF, AC and length are queried from sites only SV VCF file which can be found in AoU CDRv8 directory. Cytoband inforamtion are from [`UCSC database GoldenPath`](https://hgdownload.soe.ucsc.edu/goldenPath/hg38/database/). Genic information (gene names, genic intervals, gene length) are downloaded from [`GENCODE v46`](https://www.gencodegenes.org/human/release_46.html).
+
+CNV Annotation table can be created using [`04_CNV_Annotation_Table.ipynb`](/02_data_processing/03_CNV_Annotation_Table.ipynb).
+
+### 5. Sample QC: AoU Know Issues #10, Sex and Relatedness
+
+Prior to downstream analysis, further QCs need to be applied. (A) First, samples with srWGS issues (N=4044) as mentions in the [`CDRv8 Genomic Quality Report`](https://support.researchallofus.org/hc/en-us/articles/29390274413716-All-of-Us-Genomic-Quality-Report) (Known Issue #10 pg. 72) needs to be removed as suggested. (B) Then, any sample sex discordant between self reported sex and DRAGEN Aneuploidy needs to be removed. It needs to compare the computed sex from DRAGEN against the self-reported sex assigned at birth and only included “male” and “female” in self-reported sex questionnaires without any mismatch with DRAGEN ploidy. Also, samples with abnormal DRAGEN ploidy needs to be removed. (C) In addition, samples identified and flagged as related were removed in accordance with the AoU genomic quality control guidelines to generate an unrelated study cohort for downstream analyses. These three steps can be applied using script [`05_additional_QC.ipynb`](/02_data_processing/05_additional_QC.ipynb).
 
 ---
 
 ## CNV Region Analysis
 
+To analyze CNV regions, users should follow XXXXX steps.
+
+1. Step 1: Covariate Tables
+
+2. Step 2: Modify `.fam` files
+
+3. Step 3: Run Firth's Logistic Regression
 
 
 ---
@@ -198,3 +249,7 @@ This notebook performs a Weighted Stouffer's meta-analysis across EUR, AFR, AMR 
 
 ---
 ## Publications
+
+
+---
+## Citations
