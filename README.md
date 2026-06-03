@@ -124,13 +124,16 @@ Since all jobs must be run in the Google Cloud environment, users with Controlle
 
 To set up `dsub` and run batch jobs in the background within AoU, first run [`01_dsub_setup.sh`](/02_data_processing/01_dsub_setup.sh) script to configure `aou_dsub`.
 
-**Note:** Working in the Google Cloud environment and running dsub jobs requires basic familiarity with Google Cloud concepts, including buckets, Docker, and Docker images.
+> **Note:** Working in the Google Cloud environment and running dsub jobs requires basic familiarity with Google Cloud concepts, including buckets, Docker, and Docker images.
 
 #### 1.2 Virtual Machines (VMs) and cost
 In order to manage job costs, it is important get familiar with different machines, analysis types and cost calculations. To mange costs consider following items:
-  *  `--machine-type` : Specifies the Google Cloud virtual machine type to use for the job, including the number of CPUs and amount of memory (e.g., n1-standard-4). Please refer to [`google cloud pricing`](https://cloud.google.com/pricing/list?_gl=1*1gleqw1*_up*MQ..*_gs*MQ..&gclid=CjwKCAjwrNrQBhBjEiwAoR4VOyYRPRUNWdMzGJn9m226iwRXc7WV0b2b8wrGxFzOEyF41aCMyGz0KBoCE6MQAvD_BwE&gclsrc=aw.ds) for more information.
-  *  `--disk-size` : Sets the size of the attached persistent storage disk (in GB) used for input/output data and intermediate files during job execution.
-  *  `--boot-disk-size` : Defines the size of the VM boot disk (in GB), which stores the operating system and installed software required to run the job.
+
+| dsub options | Notes |
+|--------------|-------|
+| `--machine-type` | Specifies the Google Cloud virtual machine type to use for the job, including the number of CPUs and amount of memory (e.g., n1-standard-4). Please refer to [`google cloud pricing`](https://cloud.google.com/pricing/list?_gl=1*1gleqw1*_up*MQ..*_gs*MQ..&gclid=CjwKCAjwrNrQBhBjEiwAoR4VOyYRPRUNWdMzGJn9m226iwRXc7WV0b2b8wrGxFzOEyF41aCMyGz0KBoCE6MQAvD_BwE&gclsrc=aw.ds) for more information. |
+| `--disk-size` | Sets the size of the attached persistent storage disk (in GB) used for input/output data and intermediate files during job execution. |
+| `--boot-disk-size` | Defines the size of the VM boot disk (in GB), which stores the operating system and installed software required to run the job. |
 
 Cost Management
 
@@ -229,70 +232,134 @@ You can automate this entire process using the [`04_post_gwas_analysis.R`](03_CN
 
 ## Gene-set Burden Analysis
 
-**Here NDD gene-sets are primiarly referred to, however this same pipeline is used for any other gene-set.
+> **Note:** This pipeline is generalizable to any gene set.
 
-Pre-requistes: Duplication and deletion .bim files per ancestry (complete 01_separating_ANC_rare_CNVs_MAC) Ancestry specific annotation tables (complete 00_ANNOTATE_SV_VCF_PER_ANCESTRY)
+---
 
-Format files for burden analyses
-NOTEBOOK: 00_BURDEN_FORMAT_FILES_01.ipynb 00_BURDEN_FORMAT_ANC_SPECIFIC_FILES.ipynb
+### Prerequisites
 
-Here we want to format all files for the burden analyses. In order to complete this step, you need to have gone through the notebook 00_ANNOTATE_SV_VCF_PER_ANCESTRY. We will select out all rare CNVs (or all rare CNV also with a length greater than 10kb). You can select 00_BURDEN_FORMAT_ANC_SPECIFIC_FILES.ipynb or 00_BURDEN_FORMAT_FILES_01.ipynb depending on if you are using an overall MAF calculated by All of Us or the ancestry specific MAF. Then we will overlap these rCNVs to genes per each gene-set for the gene-set analyses. For each gene-set we have a list of genes within it. We then take our annotation table and overlap the rCNVs to each gene based on gene name and position.
+Before running gene-set burden analysis, generate and format the required input files:
 
-Generate CNV genotype matrix using PLINK
-NOTEBOOK: 00_BURDEN_COUNT_PLINK_02.ipynb
+| File | Notebook |
+|------|----------|
+| Duplication and deletion `.bim` files seperation per ancestry | [`01_filter_rare_cnvs.py`](/04_CNV_gene_set_analysis/01_filter_rare_cnvs.py) |
+| Ancestry-specific annotation tables | [`02_annotate_SV_per_ancestry.ipynb`](/04_CNV_gene_set_analysis/02_annotate_SV_per_ancestry.ipynb) |
+| Burden analysis format files (overall MAF) | [`03_burden_bormat_biles.py`](/04_CNV_gene_set_analysis/03_burden_format_Files.py) |
+| Burden analysis format files (ancestry-specific MAF) | [`04_Burden_Format_Files_Ancestry_Specific.py`](/04_CNV_gene_set_analysis/04_Burden_Format_Files_Ancestry_Specific.py) |
 
-Individual level CNV count and burden was assessed using PLINK1.9 and -–recode -A (to verify code specification see: https://www.cog-genomics.org/plink/1.9/data#recode). This will result in 0,1,2. Where 2 is heterozygous, and 1 is homozygous for the minor allele. Homozygous for the minor allele in terms of CNVs means the individual has two identical copies of the DNA segment that is less common in the general population.
+#### Allele Frequency Options
 
-Each job will select out different CNVs to identify individual level presence. For example, using --extract you can select out all rare CNVs across the genome.
+This pipeline extracts all rare CNVs at all sizes, as well as rare CNVs with length > 10 kb. Two MAF-based analysis options are available:
 
-Calculate genomewide burden for all CNVs and overlapping CNVs to specific (NDD) gene sets.
-NOTEBOOK: 00_BURDEN_NDD_GENE_SET_03.ipynb
+- **Overall MAF** (entire AoU cohort): use [`03_burden_format_files.py`](/04_CNV_gene_set_analysis/03_Burden_Format_Files.py)
+- **Ancestry-specific MAF**: use [`04_burden_format_files_ancestry_specific.py`](/04_CNV_gene_set_analysis/04_burden_format_files_ancestry_specific.py)
 
-OR
+#### Gene-Set Overlap
 
-00_BURDEN_GENOMWIDE_03.ipynb
+Each gene set is represented as a single-column list of gene names. After filtering rCNVs, overlap them with the annotation table to identify rCNVs that intersect each gene set by gene name and genomic position.
 
-First, we calculate the total burden in terms of count and length (Mb) per chromosome. Specifically this includes: duplication count, duplication length (Mb), deletion count, deletion length (Mb). Second, we need to merge the chromosome level scores together. At this point we have chromosome level files with rows=IIDs, columns= dup_count, del_count, dup_length, del_length. Chromosomes are merged and the average rCNV length (genomewide) is calculated, the total genomewide_del_count (or dup), genome_wide_del_burden_mb (or dup).
+---
 
-NOTE: In the 00_BURDEN_GENOMWIDE_03.ipynb notebook this is truly all genomewide dup/del counts/length, and average. BUT in the 00_BURDEN_NDD_GENE_SET_03.ipynb this is restricted per gene-set.
+### Step 1 — Generate CNV Genotype Matrix (PLINK)
 
-At the end of this step you should have a file that has these columns: FID IID genome_wide_del_burden_mb genome_wide_dup_burden_mb genome_wide_del_count genome_wide_dup_count genome_wide_total_burden_mb genome_wide_total_count
+**Notebook:** [`05_burden_count.py`](/04_CNV_gene_set_analysis/05_burden_count.py)
 
-Calculate whether the burden of rCNVs differs across cases and controls
-NOTEBOOK: 00_BURDEN_NDD_GENE_SET_04.ipynb OR
+Individual-level CNV counts are assessed using PLINK 2.0 with the `--export A` flag, which produces sample-major additive coding:
 
-00_BURDEN_GENOMEWIDE_04A.ipynb
+| Value | Meaning |
+|-------|---------|
+| `0` | Homozygous reference — 0 copies of the counted allele |
+| `1` | Heterozygous — 1 copy of the counted allele |
+| `2` | Homozygous alternative — 2 copies of the counted allele (i.e., two identical copies of a rare CNV segment) |
+| `NA` / `NaN` | Missing genotype data |
 
-This script tests the whether the burden of all CNVs (rare duplications and deletions) differs across cases and controls. Additionally, the burden of total count and distance across CNV type (duplication, deletion, either duplication or deletion) was examined. Similarly, this was completed for the set of CNVs which overlap NDD gene-sets (as used in the PGC-PTSD Maihofer et al. 2022 paper [Supplementary Table 2]. CNV level association analyses have revealed differences in genomic inflation for Firth's regression vs. GLM. As a result, we also tested whether there were gene-set differences using GLM logistic regression or Firth's logistic regression.
+Use `--extract` to select specific CNV subsets (e.g., all rare CNVs across the genome) for individual-level presence calculations.
 
-Primary geneset burden models include PC1:PC5, genomewide total count, and average genomwide CNV length (Mb) as covariates in concordance with Maihofer et al. (2022). However, sensitivity analyses including sex and age along with PC1:PC5, genomewide total burden (Mb), and average genomwide CNV length (Mb) can be completed with these scripts. Notably, Maihofer et al. (2022) uses regular GLM, however we have included firth's regression as well given the small size of rCNVs there is high sparsity in the data.
+---
 
-Maihofer et al. (2022) https://www.nature.com/articles/s41380-022-01776-4#Abs1 "analyses also contained predictors for genome-wide total CNV count and genome-wide average length of CNVs" (Maihofer et al., 2022)
+### Step 2 — Calculate Genome-Wide and Gene-Set Burden
 
-In an effort to replicate Maihofer et al. (2022) we also used the same predictors which included duplication count and deletion count. See the corresponding GitHub to verify this: https://github.com/nievergeltlab/cnv_freeze1/blob/main/04_gene_set_ologit.r#L183
+**Notebooks:**
+For both genome-wide and gene-set-specific burden scores: [`06_genome-wide_burden_calcualtion.ipynb`](/04_CNV_gene_set_analysis/06_genome-wide_burden_calcualtion.ipynb)
 
-However, we also included the following predictors: duplication length (Mb), deletion length (Mb), genomewide total count, genomewide total length (Mb). To be clear, the genomewide total count, genomewide total length (Mb), and average rCNV length files should come from the files created in 00_BURDEN_GENOMWIDE_03.ipynb NOT from 00_BURDEN_NDD_GENE_SET_03.ipynb, as these genomewide total count/length and average rCNV legnth files are restricted to these gene-sets. So, regardless of if you are in the 00_BURDEN_NDD_GENE_SET_04.ipynb or 00_BURDEN_GENOMWIDE_04A.ipynb/00_BURDEN_GENOMWIDE_04B.ipynb notebook these files should be used.
+### Workflow
 
-Lastly, depending on the notebook 00_BURDEN_GENOMWIDE_04A.ipynb.00_BURDEN_GENOMWIDE_04B.ipynb or 00_BURDEN_NDD_GENE_SET_04.ipynb the deletion count and duplication count variables will either correspond to the genomewide deletion/duplication count OR will represent the gene-set deletion/duplication count.
+1. **Per-chromosome burden** — calculate `duplication count`, `duplication length (Mb)`, `deletion count`, and `deletion length (Mb)` for each chromosome.
+2. **Merge chromosomes** — combine chromosome-level scores into a single file with rows = `IIDs` and columns = `dup_count`, `del_count`, `dup_length`, `del_length`.
+3. **Compute summary metrics** — calculate average rCNV length (genome-wide), total genome-wide deletion/duplication counts, and total deletion/duplication burden in Mb.
 
-Organize NDD gene-set results
-00_BURDEN_NDD_GENE_SET_05.ipynb
+### Output
 
-This notebook performs multiple testing correction for NDD gene set tests. Here multiple testing is done following the same exact method as Maihofer et al. (2022) and also to all gene-set predictiors (eg. genomewide count/length, deletion/duplication length).
+The final file should contain the following columns:
 
-00_BURDEN_PTSD_GWAS_GENE_SET_05.ipynb
+`FID`, `IID`, `genome_wide_del_burden_mb`, `genome_wide_dup_burden_mb`, `genome_wide_del_count`, `genome_wide_dup_count`, `genome_wide_total_burden_mb`, `genome_wide_total_count`
 
-This notebook performs multiple testing correction for 5 PTSD GWAS gene set tests.
+> **Important:** [`06_genome-wide_burden_calcualtion.ipynb`](/04_CNV_gene_set_analysis/06_genome-wide_burden_calcualtion.ipynb) computes both genome-wide and gene-set restricted burden metrics. If you provide all rCNV in the AoU dataset, it provides **Genome-wide metrics**. If you provide only rCNVs ovelap with gene sets, it provides **Gene-set restricted metrics**.
 
-00_BURDEN_ABNORMAL_GENE_SET_05.ipynb
+---
 
-This notebook performs multiple testing correction for abnormal gene set tests derived from mouse mutant studies.
+### Step 3 — Test Burden Differences Across Cases and Controls
 
-Meta-Analysis
-00_BURDEN_META_ANALYSIS_06.ipynb
+**Notebooks:** [`00_BURDEN_NDD_GENE_SET_04.ipynb`]() or [`00_BURDEN_GENOMEWIDE_04A.ipynb`]()
 
-This notebook performs a Weighted Stouffer's meta-analysis across EUR, AFR, AMR and across gene-sets (NDD gene-sets, PTSD gene-sets, and abnormal behavior gene-sets). In addition, to assess the consistency of rare CNV effects across EUR, AFR, and AMR ancestries, I calculated Cochran’s Q and the I^2 statistic. Gene-sets exhibiting P_het < 0.05 or I^2 > 50 were identified as having significant ancestral discrepancy, suggesting that the rare variant burden in these pathways may be influenced by population-specific genetic architecture or limited by the differential power of the ancestry cohorts. However, given the small number of cohorts (k=3) these results should be interepreted with caution.
+This step tests whether the burden of rare CNVs (duplications and deletions) differs between cases and controls. Burden metrics assessed include total count and total length for each CNV type (duplication, deletion, or either).
 
+### Covariates
+
+Primary models follow [Maihofer et al. (2022)](https://www.nature.com/articles/s41380-022-01776-4) and in current pipeline includes following covariates:
+- PC1–PC10
+- Age
+- Sex
+- Genome-wide total CNV count
+- Average genome-wide CNV length (Mb)
+
+Sensitivity analyses can additionally include sex and age as covariates.
+
+### Regression Methods
+
+Both GLM logistic regression and Firth's logistic regression are supported. Due to the high sparsity of rare CNV data, Firth's regression is included alongside standard GLM to account for genomic inflation differences observed between methods.
+
+### Predictor Variables
+
+To replicate Maihofer et al. (2022), the primary predictors include duplication count and deletion count (see the [reference implementation](https://github.com/nievergeltlab/cnv_freeze1/blob/main/04_gene_set_ologit.r#L183)). Additional predictors included here are:
+
+- Duplication length (Mb)
+- Deletion length (Mb)
+- Genome-wide total count
+- Genome-wide total length (Mb)
+
+> **Note:** In `00_BURDEN_NDD_GENE_SET_04.ipynb`, deletion and duplication counts represent **gene-set-specific** values. In `00_BURDEN_GENOMEWIDE_04A.ipynb` / `00_BURDEN_GENOMEWIDE_04B.ipynb`, they represent **genome-wide** values.
+
+---
+
+### Step 4 — Multiple Testing Correction
+
+### NDD Gene Sets
+**Notebook:** [`00_BURDEN_NDD_GENE_SET_05.ipynb`]()
+
+Applies multiple testing correction for NDD gene-set tests, following the same procedure as Maihofer et al. (2022). Correction is also applied to all gene-set predictors (e.g., genome-wide count/length, deletion/duplication length).
+
+### PTSD GWAS Gene Sets
+**Notebook:** [`00_BURDEN_PTSD_GWAS_GENE_SET_05.ipynb`]()
+
+Applies multiple testing correction for 5 PTSD GWAS gene-set tests.
+
+### Abnormal Behavior Gene Sets
+**Notebook:** [`00_BURDEN_ABNORMAL_GENE_SET_05.ipynb`]()
+
+Applies multiple testing correction for abnormal gene-set tests derived from mouse mutant studies.
+
+---
+
+### Step 5 — Meta-Analysis
+
+**Notebook:** [`00_BURDEN_META_ANALYSIS_06.ipynb`]()
+
+Performs a **Weighted Stouffer's meta-analysis** across EUR, AFR, and AMR ancestries, and across gene-set categories (NDD, PTSD, and abnormal behavior).
+
+To assess consistency of rare CNV effects across ancestries, **Cochran's Q** and **I²** statistics are calculated. Gene sets with P_het < 0.05 or I² > 50% are flagged as having significant ancestral discrepancy, which may reflect population-specific genetic architecture or differential statistical power across ancestry cohorts.
+
+> **Caution:** With only k = 3 cohorts, heterogeneity statistics should be interpreted carefully.
 
 ---
 ## Publications
@@ -300,5 +367,7 @@ This notebook performs a Weighted Stouffer's meta-analysis across EUR, AFR, AMR 
 
 ---
 ## Citations
+
+Maihofer, A.X., Engchuan, W., Huguet, G. et al. Rare copy number variation in posttraumatic stress disorder. Mol Psychiatry 27, 5062–5069 (2022). https://doi.org/10.1038/s41380-022-01776-4
 
 Singh, M., Chatzinakos, C., Barr, P. B., Gentry, A. E., Bigdeli, T. B., Webb, B. T., & Peterson, R. E. (2025). Trans-ancestry Genome-Wide Analyses in UK Biobank Yield Novel Risk Loci for Major Depression. medRxiv: The Preprint Server for Health Sciences, 2025.02.22.25322721. https://doi.org/10.1101/2025.02.22.25322721 
