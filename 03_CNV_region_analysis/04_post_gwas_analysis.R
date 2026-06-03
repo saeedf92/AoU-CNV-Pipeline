@@ -1,9 +1,8 @@
-library(dplyr)
 library(tidyverse)
-library(ggplot2)
 library(qqman)
 
-setwd("/path/to/the/working/directory")
+# Set working directory to the location of the results
+setwd("/path/to/your/analysis/directory")
 
 # concatinate gwas results
 read_and_combine_firth <- function(input_path, input_pattern = "*.glm.firth") {
