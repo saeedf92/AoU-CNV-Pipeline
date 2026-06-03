@@ -300,7 +300,7 @@ The final file should contain the following columns:
 
 ### Step 3 — Test Burden Differences Across Cases and Controls
 
-**Notebooks:** [`00_BURDEN_NDD_GENE_SET_04.ipynb`]() or [`00_BURDEN_GENOMEWIDE_04A.ipynb`]()
+**Notebook:** [`07_burden_test.ipynb`](/04_CNV_gene_set_analysis/07_burden_test.ipynb)
 
 This step tests whether the burden of rare CNVs (duplications and deletions) differs between cases and controls. Burden metrics assessed include total count and total length for each CNV type (duplication, deletion, or either).
 
@@ -328,10 +328,11 @@ To replicate Maihofer et al. (2022), the primary predictors include duplication 
 - Genome-wide total count
 - Genome-wide total length (Mb)
 
-> **Note:** In `00_BURDEN_NDD_GENE_SET_04.ipynb`, deletion and duplication counts represent **gene-set-specific** values. In `00_BURDEN_GENOMEWIDE_04A.ipynb` / `00_BURDEN_GENOMEWIDE_04B.ipynb`, they represent **genome-wide** values.
+> **Note:** The [`07_burden_test.ipynb`](/04_CNV_gene_set_analysis/07_burden_test.ipynb) script supports both genome-wide and gene-set burden analyses, depending on your input data:
+> * **Genome-wide metrics:** Generated when analyzing all rCNVs in the AoU dataset.
+> * **Gene-set specific metrics:** Generated when restricting the analysis to a targeted gene set.
 
----
-
+<!--
 ### Step 4 — Multiple Testing Correction
 
 ### NDD Gene Sets
@@ -348,12 +349,12 @@ Applies multiple testing correction for 5 PTSD GWAS gene-set tests.
 **Notebook:** [`00_BURDEN_ABNORMAL_GENE_SET_05.ipynb`]()
 
 Applies multiple testing correction for abnormal gene-set tests derived from mouse mutant studies.
-
+-->
 ---
 
 ### Step 5 — Meta-Analysis
 
-**Notebook:** [`00_BURDEN_META_ANALYSIS_06.ipynb`]()
+**Notebook:** [`08_meta_analysis.py`](/04_CNV_gene_set_analysis/08_meta_analysis.py)
 
 Performs a **Weighted Stouffer's meta-analysis** across EUR, AFR, and AMR ancestries, and across gene-set categories (NDD, PTSD, and abnormal behavior).
 
@@ -364,6 +365,9 @@ To assess consistency of rare CNV effects across ancestries, **Cochran's Q** and
 ---
 ## Publications
 
+* **Alcohol Use Disorder (AUD):** *Rare Copy Number Variation and Alcohol Use Disorder in the All of Us Research Program.* (In preparation).
+* **Post-Traumatic Stress Disorder (PTSD):** *Cross-Ancestry Analysis of Rare CNV Burden in PTSD within the AoU Cohort.* (In preparation).
+* **Anxiety Disorders (ANX):** *Rare Copy Number Variation and Anxiety Disorder in the All of Us Research Program..* (In preparation).
 
 ---
 ## Citations
