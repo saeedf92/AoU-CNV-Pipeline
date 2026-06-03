@@ -1,6 +1,5 @@
 # AoU CNV Pipeline
 
-<!-- [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT) -->
 [![Platform: All of Us](https://img.shields.io/badge/Platform-AoU_Workbench1.0-blue)](https://workbench.researchallofus.org/)
 ![Python Version](https://img.shields.io/badge/python-3.10%2B-blue.svg)
 ![R Version](https://img.shields.io/badge/R-4.4%2B-blue.svg)
@@ -21,10 +20,9 @@ A bioinformatics pipeline designed for the **All of Us (AoU) Research Program** 
 - [Data Processing](#data-processing)
 - [CNV Region Analysis](#cnv-region-analysis)
 - [Gene-set Burden Analysis](#gene-set-burden-analysis)
-- [Usage Examples](#usage-examples)
 - [Publications](#publications)
 - [Citations](#citations)
-- [License](#license)
+<!-- - [License](#license) -->
 
 ---
 
@@ -352,7 +350,7 @@ Applies multiple testing correction for abnormal gene-set tests derived from mou
 -->
 ---
 
-### Step 5 — Meta-Analysis
+### Step 4 — Meta-Analysis
 
 **Notebook:** [`08_meta_analysis.py`](/04_CNV_gene_set_analysis/08_meta_analysis.py)
 
@@ -375,3 +373,5 @@ To assess consistency of rare CNV effects across ancestries, **Cochran's Q** and
 Maihofer, A.X., Engchuan, W., Huguet, G. et al. Rare copy number variation in posttraumatic stress disorder. Mol Psychiatry 27, 5062–5069 (2022). https://doi.org/10.1038/s41380-022-01776-4
 
 Singh, M., Chatzinakos, C., Barr, P. B., Gentry, A. E., Bigdeli, T. B., Webb, B. T., & Peterson, R. E. (2025). Trans-ancestry Genome-Wide Analyses in UK Biobank Yield Novel Risk Loci for Major Depression. medRxiv: The Preprint Server for Health Sciences, 2025.02.22.25322721. https://doi.org/10.1101/2025.02.22.25322721 
+
+
