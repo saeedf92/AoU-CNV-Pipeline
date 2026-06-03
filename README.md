@@ -7,7 +7,7 @@
 ![GitHub last commit](https://img.shields.io/github/last-commit/saeedf92/AoU-CNV-pipeline)
 
 
-README updated: <i>May-28-2026</i> 
+README updated: <i>June-03-2026</i> 
 
 A bioinformatics pipeline designed for the **All of Us (AoU) Research Program** Workbench to detect, filter, and analyze Copy Number Variations (CNVs) from large-scale short-read Whole Genome Sequencing (srWGS) genomic data.
 
